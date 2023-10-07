@@ -1,4 +1,4 @@
-import { getRequestFn, setRequestFn } from "matrix-bot-sdk";
+import "jest-extended";
 import type _request from "request";
 
 type RequestFn = typeof _request;

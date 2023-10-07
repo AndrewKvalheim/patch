@@ -3,7 +3,7 @@ export { default as escapeHtml } from "lodash.escape";
 import { DEFAULT_SCHEMA, load, Type } from "js-yaml";
 import MarkdownIt from "markdown-it";
 import _fetch from "node-fetch"; // Pending DefinitelyTyped/DefinitelyTyped#60924
-import { userAgent } from "./version.js";
+import { userAgent } from "./version";
 
 const md = new MarkdownIt();
 const schema = DEFAULT_SCHEMA.extend([

@@ -18,9 +18,9 @@ import {
   StateEvent,
   StateEventInput,
   Sync,
-} from "./matrix.js";
-import { env, identity } from "./utilities.js";
-import { userAgent } from "./version.js";
+} from "./matrix";
+import { env, identity } from "./utilities";
+import { userAgent } from "./version";
 
 export interface RoomCreateOptions extends RoomCreateFullOptions {
   initial_state?: StateEventInput[];
@@ -116,9 +116,9 @@ export default class Client extends MatrixClient {
     } while (from);
   }
 
-  public override getRoomState: MatrixClient["getRoomState"] = async (id) => [
-    ...(this.#cache.get(id)?.values() ?? []),
-  ];
+  public override getRoomState: MatrixClient["getRoomState"] = async (
+    id
+  ): Promise<StateEvent[]> => [...(this.#cache.get(id)?.values() ?? [])];
 
   // TODO: Can this automatically choose the StateEvent variant based on the `type` argument?
   public override getRoomStateEvent = async <E extends StateEvent>(
@@ -222,21 +222,19 @@ export default class Client extends MatrixClient {
     sync: Sync,
     emit
   ) => {
-    const emissions: Parameters<typeof this.emit>[] = [];
+    // console.log("SYNC", JSON.stringify(sync, undefined, 2));
 
     Object.entries(sync.rooms?.join ?? {}).forEach(([room, { state, timeline }]) => {
-      state.events.forEach((e) => this.setCache(room, e));
-      timeline.events.forEach((e) => isStateEvent(e) && this.setCache(room, e));
+      state?.events?.forEach((e) => this.setCache(room, e));
+      timeline?.events?.forEach((e) => isStateEvent(e) && this.setCache(room, e));
     });
 
-    if (!this.#completedInitialSync) {
+    if (!this.#completedInitialSync && !sync.rooms) {
       this.#completedInitialSync = true;
-      emissions.push(["sync.initial"]);
+      this.emit("sync.initial");
     }
 
-    const result = await super.processSync(sync, emit);
-    emissions.forEach((args) => this.emit(...args));
-    return result;
+    return await super.processSync(sync, emit);
   };
 
   private setCache(room: string, event: StateEvent) {

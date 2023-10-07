@@ -1,8 +1,5 @@
 # Application
 /state/
 
-# TypeScript
-/dist
-
 # Yarn
 /node_modules

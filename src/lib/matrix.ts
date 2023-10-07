@@ -1,9 +1,9 @@
 import isEqual from "lodash.isequal";
 import mergeWith from "lodash.mergewith";
 import type { MatrixError, PowerLevelsEventContent as PowerLevels } from "matrix-bot-sdk";
-import type { RoomCreateOptions } from "./Client.js";
-import type { Announcement } from "../commands/Announce.js";
-import type { IntroEvent, RedirectEvent, TagEvent } from "../modules/Reconciler.js";
+import type { RoomCreateOptions } from "./Client";
+import type { Announcement } from "../modules/Announce";
+import type { IntroEvent, RedirectEvent, TagEvent } from "../modules/Reconciler";
 
 //
 // Events
@@ -89,6 +89,7 @@ export type StateEvent<T = unknown> = (
   | IStateEvent<"m.room.name", { name: string }>
   | IStateEvent<"m.room.power_levels", PowerLevels>
   | IStateEvent<"m.room.topic", { topic: string }>
+  | IStateEvent<"m.space.parent", { canonical?: boolean; via: string[] }>
   | IntroEvent
   | RedirectEvent
   | TagEvent

@@ -1,5 +1,5 @@
-import type Client from "./Client.js";
-import type Patch from "../Patch.js";
+import type Client from "./Client";
+import type Patch from "../Patch";
 
 export default abstract class Module {
   protected trace: Patch["trace"];
@@ -17,4 +17,5 @@ export default abstract class Module {
   }
 
   public abstract start(): Promise<void>;
+  public abstract stop(): Promise<void>;
 }

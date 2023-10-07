@@ -1,50 +1,40 @@
-import assert from "assert/strict";
-import { LogService as LS, SimpleFsStorageProvider } from "matrix-bot-sdk";
-import { TypedEmitter } from "tiny-typed-emitter";
-import Client from "./lib/Client.js";
-import type { Event, MessageEvent, Received, StateEvent } from "./lib/matrix.js";
-import type { Plan } from "./lib/Plan.js";
-import { escapeHtml } from "./lib/utilities.js";
-import { version } from "./lib/version.js";
-import Commands from "./modules/Commands.js";
-import Concierge from "./modules/Concierge.js";
-import Feedback from "./modules/Feedback.js";
-import ReadReceipts from "./modules/ReadReceipts.js";
-import Reconciler from "./modules/Reconciler.js";
+import {
+  LogService as LS,
+  MemoryStorageProvider,
+  SimpleFsStorageProvider,
+} from "matrix-bot-sdk";
+import Client from "./lib/Client";
+import type { Event, Received } from "./lib/matrix";
+import type Module from "./lib/Module";
+import { escapeHtml, expect } from "./lib/utilities";
+import { version } from "./lib/version";
+import EventEmitter from "events";
 
 interface Config {
   accessToken: string;
   baseUrl: string;
-  plan: Plan;
-}
-
-interface Emissions {
-  membership: (room: string, event: Received<StateEvent<"m.room.member">>) => void;
-  message: (room: string, event: Received<MessageEvent<"m.room.message">>) => void;
-  reaction: (room: string, event: Received<MessageEvent<"m.reaction">>) => void;
-  readable: (room: string, event: Received<Event>) => void;
+  modules: (new (...args: ConstructorParameters<typeof Module>) => Module)[];
+  statePath?: string;
 }
 
 type Log = <D>(message: string, data?: D, notice?: string) => void;
 
-export default class Patch extends TypedEmitter<Emissions> {
-  static modules = [Commands, Concierge, Feedback, ReadReceipts];
-
+export default class Patch extends EventEmitter {
   public controlRoom: string | undefined;
-  public readonly id: string;
+  public id: string | undefined;
 
   readonly #matrix: Client;
-  readonly #reconciler: Reconciler;
+  #modules: Module[];
 
-  public constructor({ accessToken, baseUrl, plan }: Config) {
+  public constructor({ accessToken, baseUrl, modules, statePath }: Config) {
     super();
 
-    const storage = new SimpleFsStorageProvider("state/state.json");
-
-    this.id = plan.steward.id;
+    const storage = statePath
+      ? new SimpleFsStorageProvider(statePath)
+      : new MemoryStorageProvider();
 
     this.#matrix = new Client(baseUrl, accessToken, storage);
-    this.#reconciler = new Reconciler(this, this.#matrix, plan);
+    this.#modules = modules.map((M) => new M(this, this.#matrix));
   }
 
   trace: Log = (m, d) => LS.trace("Patch", m, d);
@@ -56,8 +46,8 @@ export default class Patch extends TypedEmitter<Emissions> {
   public async start() {
     this.info("▶️ Start", { version });
 
-    this.info("🪪 Authenticate", { user: this.id });
-    assert.equal(await this.#matrix.getUserId(), this.id);
+    this.id = await this.#matrix.getUserId();
+    this.info("🪪 Authenticated", { user: this.id });
 
     this.#matrix.on("room.event", this.#dispatch);
 
@@ -65,20 +55,15 @@ export default class Patch extends TypedEmitter<Emissions> {
     await this.#matrix.start();
     this.debug("📥 Completed sync");
 
-    await this.#reconciler.start();
-    await Promise.all(Patch.modules.map((M) => new M(this, this.#matrix).start()));
+    await Promise.all(this.#modules.map((m) => m.start()));
   }
 
-  public getCanonicalSpace(room: string): string | undefined {
-    return this.#reconciler.getParent(room);
+  public async stop() {
+    await Promise.all([this.#matrix.stop(), ...this.#modules.map((m) => m.stop())]);
   }
 
   public isControlRoom(room: string): boolean {
     return !!this.controlRoom && room === this.controlRoom;
-  }
-
-  public async sync() {
-    await this.#reconciler.reconcile();
   }
 
   #alert =
@@ -87,18 +72,16 @@ export default class Patch extends TypedEmitter<Emissions> {
       this.controlRoom &&
       this.#matrix.sendHtmlNotice(
         this.controlRoom,
-        notice ??
-          `<p><strong>${level}:</strong> ${escapeHtml(message)}</p>${
-            data
-              ? `<pre><code>${escapeHtml(
-                  JSON.stringify(data, undefined, 2)
-                )}</code></pre>`
-              : ""
-          }`
+        `<p><strong>${level}:</strong> ${escapeHtml(message)}</p>${
+          notice ??
+          (data
+            ? `<pre><code>${escapeHtml(JSON.stringify(data, undefined, 2))}</code></pre>`
+            : "")
+        }`
       );
 
   #dispatch = (room: string, event: Received<Event>) => {
-    if (event.sender === this.id) return;
+    if (event.sender === expect(this.id)) return;
 
     if (event.type === "m.reaction") this.emit("reaction", room, event);
     else if (event.type === "m.room.member") this.emit("membership", room, event);

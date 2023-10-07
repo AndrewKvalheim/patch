@@ -6,7 +6,7 @@ brief: !md |
   [View source](https://github.com/SeaGL/patch)
 
 controlBrief: !md |
-  Commands:
+  Admin commands:
 
     - `!announce <pill>, <pill>…: Message`: Broadcast a message to multiple rooms/spaces
     - `!sync`: Synchronize space with data sources

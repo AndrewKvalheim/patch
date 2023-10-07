@@ -2,7 +2,7 @@ import chalk from "chalk";
 import { DateTime } from "luxon";
 import { ILogger, LogLevel } from "matrix-bot-sdk";
 import { inspect } from "util";
-import { optional } from "./utilities.js";
+import { optional } from "./utilities";
 
 const oneLine = { breakLength: Infinity, compact: true };
 

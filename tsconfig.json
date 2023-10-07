@@ -1,10 +1,13 @@
 {
   "extends": "@tsconfig/node18-strictest-esm/tsconfig.json",
+  "files": ["node_modules/jest-extended/types/index.d.ts"],
+  "exclude": ["test/**", "**/*.test.ts"],
 
   "compilerOptions": {
     "module": "esnext", // TS2821
-    "outDir": "dist",
     "plugins": [{ "transform": "typia/lib/transform" }],
     "resolveJsonModule": true
-  }
+  },
+
+  "ts-node": { "compiler": "ttypescript" }
 }

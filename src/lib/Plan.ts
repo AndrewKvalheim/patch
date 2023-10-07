@@ -45,11 +45,11 @@ export namespace Plan {
 }
 
 export type Plan = {
-  avatars: Record<string, string>;
+  avatars?: Record<string, string>;
   defaultRoomVersion: string;
   homeserver: string;
   inheritUserPowerLevels?: Plan.InheritUserPowerLevels;
-  jitsiDomain: string;
+  jitsiDomain?: string;
   powerLevels: PowerLevels;
   rooms?: Plan.Rooms;
   sessions?: Plan.Sessions;
